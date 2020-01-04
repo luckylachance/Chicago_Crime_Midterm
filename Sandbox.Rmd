@@ -1,0 +1,53 @@
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate) # Time manipulation
+library(RSocrata)# Open data Source API Interface with data
+library(stringi)# Time manipulation
+```
+
+```{r}
+crime <- read_csv('data/crime.csv')
+crime$DTG = as.Date(crime$`DATE  OF OCCURRENCE`, "%m/%d/%Y")# Creates a Date Column
+crime$WEEK = as.character(crime$DTG, format="%Y-%U") # Creates a Week Column
+crime$COUNT = 1
+```
+```{r}
+crime <- crime[-which(is.na(crime$`LOCATION`)),] 
+crime <- crime %>% 
+  dplyr::rename(OCCURANCE='DATE  OF OCCURRENCE',PRIMARY = 'PRIMARY DESCRIPTION',SECONDARY = 'SECONDARY DESCRIPTION',LOCATION_DESCRIPTION = 'LOCATION DESCRIPTION',X = 'X COORDINATE',Y='Y COORDINATE')
+colSums(is.na(crime))
+```
+
+```{r}
+cols <- colnames(crime)
+```
+
+
+```{r Working_Dropdowns}
+dropdowns <- unique(crime[c("PRIMARY", "SECONDARY")])
+dropdowns <- dropdowns[order(dropdowns$PRIMARY,dropdowns$SECONDARY),]
+```
+
+
+```{r 1st_Chart}
+crime_wk <- crime %>%
+  group_by(WEEK,PRIMARY,SECONDARY,BEAT,BLOCK) %>% 
+  dplyr::summarize(INCIDENTS=sum(COUNT)) 
+```
+
+Testing Maps
+```{r}
+library(dplyr)
+library(plyr)
+library(lubridate) # Time manipulation
+library(RSocrata)# Open data Source API Interface with data
+library(stringi)# Time manipulation
+library(ggmap)
+
+homicides <- crime %>% filter(PRIMARY == "HOMICIDE")
+
+qmplot(LON, LAT, data = homicides, geom = "blank", zoom = 11, maptype = "watercolor", darken = .1, legend = "topRight") +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = .1, color = NA) +
+  scale_fill_gradient2("Homicide\nPropensity", low = "white", mid = "yellow", high = "red")
+```
