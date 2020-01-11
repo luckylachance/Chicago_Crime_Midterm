@@ -1,0 +1,85 @@
+---
+title: "Test Map Animation"
+author: "Lucky"
+date: "1/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
+```{r}
+readRds('data/crime_yr.Rds')
+```
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+library(dplyr)
+library(plyr)
+library(lubridate) # Time manipulation
+library(RSocrata)# Open data Source API Interface with data
+library(stringi)# Time manipulation
+library(ggmap)
+library(ggplot2)
+library(gganimate)
+
+#geometry
+map <- data %>% filter(PRIMARY == "HOMICIDE")
+
+qmplot(LON, LAT, data = map, geom = "blank", zoom = 11, maptype = "watercolor", darken = .1, legend = "topRight") +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = .1, color = NA) +
+  scale_fill_gradient2("Homicide\nPropensity", low = "white", mid = "yellow", high = "red")
+ # Here comes the gganimate specific bits
+  labs(title = 'Year: {frame_time}', x = 'PRIMARY', y = 'CASECOUNT') +
+  transition_time(YR) +
+  ease_aes('linear')
+```
+
+```{r}
+library(leaflet)
+map <- leaflet(data) %>%
+  addTiles() %>%
+  addCircleMarkers(lng = ~LON, lat = ~LAT, popup = ~CASECOUNT,
+                   radius = 3, stroke = FALSE)
+
+map
+```
+```{r}
+# summarize by day?
+# perhaps round the lat long and then do it?
+# since it's all in sept
+Year_grp <- data %>%
+  group_by(YR, PRIMARY) %>%
+  summarise(LAT=mean(LAT),LON=mean(LON),total_count = sum(COUNT))
+
+# this also works -- plotting across the world here...
+Year_map <- map + geom_point(data = Year_grp,
+                        aes(LON, LAT, frame = YR, size = total_count),
+                        color = "purple", alpha = .5) + coord_fixed() +
+  labs(title = "Year")
+
+Year_map
+```
+
